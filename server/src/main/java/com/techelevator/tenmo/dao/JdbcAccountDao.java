@@ -1,5 +1,6 @@
 package com.techelevator.tenmo.dao;
 
+import com.techelevator.tenmo.exception.DaoException;
 import com.techelevator.tenmo.model.Account;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -15,7 +16,6 @@ import java.util.List;
 
 @Component
 public class JdbcAccountDao implements AccountDao{
-//updated
 
     @Autowired
     JdbcTemplate jdbcTemplate;
@@ -25,11 +25,16 @@ public class JdbcAccountDao implements AccountDao{
         Account createdAccount;
         double startingBalance = 1000;
         String sql = "INSERT INTO account(user_id, balance) VALUES (?, ?) RETURNING account_id;";
-        int newAccountId = jdbcTemplate.queryForObject(sql, int.class, account.getUserId(), startingBalance);
-        createdAccount = getAccountByAccountId(newAccountId);
-        //add try catch
-
-
+        try {
+            int newAccountId = jdbcTemplate.queryForObject(sql, int.class, account.getUserId(), startingBalance);
+            createdAccount = getAccountByAccountId(newAccountId);
+        } catch (CannotGetJdbcConnectionException e) {
+            throw new DaoException("Unable to connect to server or database", e);
+        } catch (BadSqlGrammarException e) {
+            throw new DaoException("SQL syntax error", e);
+        } catch (DataIntegrityViolationException e) {
+            throw new DaoException("Data integrity violation", e);
+        }
 
         return createdAccount;
     }
@@ -38,9 +43,17 @@ public class JdbcAccountDao implements AccountDao{
     public List<Account> getAllAccounts() {
         List<Account> allAccounts = new ArrayList<>();
         String sql = "SELECT account_id, user_id, balance FROM account;";
-        SqlRowSet results = jdbcTemplate.queryForRowSet(sql);
-        while (results.next()){
-            allAccounts.add(mapRowToAccount(results));
+        try {
+            SqlRowSet results = jdbcTemplate.queryForRowSet(sql);
+            while (results.next()) {
+                allAccounts.add(mapRowToAccount(results));
+            }
+        } catch (CannotGetJdbcConnectionException e) {
+            throw new DaoException("Unable to connect to server or database", e);
+        } catch (BadSqlGrammarException e) {
+            throw new DaoException("SQL syntax error", e);
+        } catch (DataIntegrityViolationException e) {
+            throw new DaoException("Data integrity violation", e);
         }
         return allAccounts;
     }
@@ -49,9 +62,17 @@ public class JdbcAccountDao implements AccountDao{
     public Account getAccountByAccountId(int id) {
         Account account = null;
         String sql = "SELECT account_id, user_id, balance FROM account WHERE account_id = ?;";
-        SqlRowSet results = jdbcTemplate.queryForRowSet(sql, id);
-        while (results.next()){
-            account = mapRowToAccount(results);
+        try {
+            SqlRowSet results = jdbcTemplate.queryForRowSet(sql, id);
+            while (results.next()) {
+                account = mapRowToAccount(results);
+            }
+        } catch (CannotGetJdbcConnectionException e) {
+            throw new DaoException("Unable to connect to server or database", e);
+        } catch (BadSqlGrammarException e) {
+            throw new DaoException("SQL syntax error", e);
+        } catch (DataIntegrityViolationException e) {
+            throw new DaoException("Data integrity violation", e);
         }
         return account;
     }
@@ -60,13 +81,23 @@ public class JdbcAccountDao implements AccountDao{
     public List<Account> getAccountByUserId(int userId) {
         List<Account> allAccounts = null;
         String sql = "SELECT account_id, user_id, balance FROM account WHERE user_id = ?;";
-        SqlRowSet results = jdbcTemplate.queryForRowSet(sql, userId);
-        while (results.next()){
-            allAccounts.add(mapRowToAccount(results));
+        try {
+            SqlRowSet results = jdbcTemplate.queryForRowSet(sql, userId);
+            while (results.next()) {
+                allAccounts.add(mapRowToAccount(results));
+            }
+        } catch (CannotGetJdbcConnectionException e) {
+            throw new DaoException("Unable to connect to server or database", e);
+        } catch (BadSqlGrammarException e) {
+            throw new DaoException("SQL syntax error", e);
+        } catch (DataIntegrityViolationException e) {
+            throw new DaoException("Data integrity violation", e);
         }
         return allAccounts;
     }
 
+
+    // CHECK THIS METHOD - DOES UPDATE WORK LIKE THIS?
     @Override
     public Account updateAccount(Account account, int id) {
         String sql = "UPDATE account SET user_id = ?, balance = ? WHERE account_id = ? RETURNING account_id;";
@@ -74,6 +105,8 @@ public class JdbcAccountDao implements AccountDao{
         return getAccountByAccountId(id);
     }
 
+
+    // DO WE WANT TO CHECK NUMBER OF ROWS?
     @Override
     public void deleteAccount(int id) {
         String sql = "DELETE FROM account WHERE account_id = ?;";

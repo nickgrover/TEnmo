@@ -35,7 +35,6 @@ public class JdbcAccountDao implements AccountDao{
         } catch (DataIntegrityViolationException e) {
             throw new DaoException("Data integrity violation", e);
         }
-
         return createdAccount;
     }
 
@@ -100,9 +99,23 @@ public class JdbcAccountDao implements AccountDao{
     // CHECK THIS METHOD - DOES UPDATE WORK LIKE THIS?
     @Override
     public Account updateAccount(Account account, int id) {
-        String sql = "UPDATE account SET user_id = ?, balance = ? WHERE account_id = ? RETURNING account_id;";
-        jdbcTemplate.update(sql, int.class, account.getUserId(), account.getBalance(), account.getAccountId());
-        return getAccountByAccountId(id);
+        Account updatedAccount = null;
+        String sql = "UPDATE account SET user_id = ?, balance = ? WHERE account_id = ?;";
+        try {
+            int numberOfRows = jdbcTemplate.update(sql, int.class, account.getUserId(), account.getBalance(), account.getAccountId());
+            if (numberOfRows == 0){
+                throw new DaoException("Zero rows affected, expected at least 1");
+            } else {
+                updatedAccount = getAccountByAccountId(account.getAccountId());
+            }
+        } catch (CannotGetJdbcConnectionException e) {
+            throw new DaoException("Unable to connect to server or database", e);
+        } catch (BadSqlGrammarException e) {
+            throw new DaoException("SQL syntax error", e);
+        } catch (DataIntegrityViolationException e) {
+            throw new DaoException("Data integrity violation", e);
+        }
+        return updatedAccount;
     }
 
 
@@ -110,7 +123,18 @@ public class JdbcAccountDao implements AccountDao{
     @Override
     public void deleteAccount(int id) {
         String sql = "DELETE FROM account WHERE account_id = ?;";
-        jdbcTemplate.update(sql, id);
+        try {
+            int numberOfRows = jdbcTemplate.update(sql, id);
+            if (numberOfRows == 0){
+                throw new DaoException("Zero rows affected, expected at least 1");
+            }
+        } catch (CannotGetJdbcConnectionException e) {
+            throw new DaoException("Unable to connect to server or database", e);
+        } catch (BadSqlGrammarException e) {
+            throw new DaoException("SQL syntax error", e);
+        } catch (DataIntegrityViolationException e) {
+            throw new DaoException("Data integrity violation", e);
+        }
     }
 
     public Account mapRowToAccount(SqlRowSet sqlRowSet){

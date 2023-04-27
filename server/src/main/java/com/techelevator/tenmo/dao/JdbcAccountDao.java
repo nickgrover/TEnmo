@@ -96,13 +96,12 @@ public class JdbcAccountDao implements AccountDao{
     }
 
 
-    // CHECK THIS METHOD - DOES UPDATE WORK LIKE THIS?
     @Override
     public Account updateAccount(Account account, int id) {
         Account updatedAccount = null;
         String sql = "UPDATE account SET user_id = ?, balance = ? WHERE account_id = ?;";
         try {
-            int numberOfRows = jdbcTemplate.update(sql, int.class, account.getUserId(), account.getBalance(), account.getAccountId());
+            int numberOfRows = jdbcTemplate.update(sql, account.getUserId(), account.getBalance(), account.getAccountId());
             if (numberOfRows == 0){
                 throw new DaoException("Zero rows affected, expected at least 1");
             } else {
@@ -119,7 +118,6 @@ public class JdbcAccountDao implements AccountDao{
     }
 
 
-    // DO WE WANT TO CHECK NUMBER OF ROWS?
     @Override
     public void deleteAccount(int id) {
         String sql = "DELETE FROM account WHERE account_id = ?;";

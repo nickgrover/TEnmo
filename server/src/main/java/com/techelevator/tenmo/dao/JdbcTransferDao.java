@@ -19,15 +19,18 @@ import java.util.List;
 @Component
 public class JdbcTransferDao implements TransferDao{
 
-    private final JdbcTemplate jdbcTemplate;
+    private UserDao userDao;
+    private JdbcTemplate jdbcTemplate;
 
-    public JdbcTransferDao(JdbcTemplate jdbcTemplate) {
+    public JdbcTransferDao(JdbcTemplate jdbcTemplate, AccountDao accountDao, UserDao userDao) {
         this.jdbcTemplate = jdbcTemplate;
+        this.accountDao = accountDao;
+        this.userDao = userDao;
     }
 
-    public JdbcAccountDao accountDao;
+    public AccountDao accountDao;
 
-    public JdbcUserDao userDao;
+
 
 //    public JdbcAccountDao(JdbcTemplate jdbcTemplate) {
 //
@@ -40,10 +43,13 @@ public class JdbcTransferDao implements TransferDao{
     @Override
     public Transfer createTransferSend(Transfer transfer) {
         Transfer createdTransfer = null;
+        double fromBalance = 0;
         String status = "approved";
         String sqlfrom = "SELECT account_id, user_id, balance FROM account WHERE user_id = ?;";
         SqlRowSet from = jdbcTemplate.queryForRowSet(sqlfrom, userDao.findIdByUsername(transfer.getFromUser()));
-        double fromBalance = from.getDouble("balance");
+        while (from.next()){
+            fromBalance = from.getDouble("balance");
+        }
         if (fromBalance > 0 && fromBalance >= transfer.getTransferAmount() && !transfer.getFromUser().equals(transfer.getToUser())) {
 
             String sql = "INSERT INTO transfer (from_user, to_user, transfer_amount, transfer_date, status, transfer_type) VALUES (?, ?, ?, ?, ?, ?) RETURNING transfer_id;";
@@ -51,18 +57,12 @@ public class JdbcTransferDao implements TransferDao{
                 int newTransferId = jdbcTemplate.queryForObject(sql, int.class, transfer.getFromUser(), transfer.getToUser(), transfer.getTransferAmount(), transfer.getTransferDate(), status, transfer.getType());
                 createdTransfer = getTransferByTransferId(newTransferId);
 
-                String sqlTo = "SELECT account_id, user_id, balance FROM account JOIN tenmo_user USING (user_id) WHERE username = ?;";
-                SqlRowSet toUser = jdbcTemplate.queryForRowSet(sqlTo,transfer.getToUser());
-                double toBalance = toUser.getDouble("balance");
-                double updatedToBalance = toBalance + transfer.getTransferAmount();
-
                 // Do the account updates
-                double fromUpdatedBalance = fromBalance - transfer.getTransferAmount();
-                String sqlUpdateFrom = "UPDATE account SET balance = ? WHERE user_id = ?;";
-                jdbcTemplate.update(sql, fromUpdatedBalance, userDao.findIdByUsername(transfer.getFromUser()));
+                String sqlUpdateFrom = "UPDATE account SET balance = balance - ? FROM tenmo_user WHERE tenmo_user.user_id = account.user_id AND tenmo_user.username = ?;";
+                jdbcTemplate.update(sqlUpdateFrom, transfer.getTransferAmount(), transfer.getFromUser());
 
-                String sqlUpdateTo = "UPDATE account SET balance = ? JOIN tenmo_user USING (user_id) WHERE username = ?;";
-                jdbcTemplate.update(sql, updatedToBalance, transfer.getToUser());
+                String sqlUpdateTo = "UPDATE account SET balance = balance + ? FROM tenmo_user WHERE tenmo_user.user_id = account.user_id AND tenmo_user.username = ?;";
+                jdbcTemplate.update(sqlUpdateTo, transfer.getTransferAmount(), transfer.getToUser());
 
             } catch (CannotGetJdbcConnectionException e) {
                 throw new DaoException("Unable to connect to server or database", e);
@@ -211,11 +211,12 @@ public class JdbcTransferDao implements TransferDao{
 
     //FIX sql statement
     @Override
-    public List<Transfer> getTransferByFromUserId(int userId) {
+    public List<Transfer> getTransferByUsername(String name) {
         List<Transfer> allTransfers = new ArrayList<>();
-        String sql = "SELECT transfer_id, transfer_date, transfer_amount, from_account, to_account, status FROM transfer JOIN account_transfer USING(transfer_id) JOIN account USING(account_id) WHERE user_id = ?;";
+//        String sql = "SELECT transfer_id, from_user, to_user, transfer_amount, transfer_date, status, transfer_type FROM transfer JOIN account_transfer USING(transfer_id) JOIN account USING(account_id) JOIN tenmo_user USING(user_id) WHERE username = ?;";
+        String sql = "SELECT transfer_id, from_user, to_user, transfer_amount, transfer_date, status, transfer_type FROM transfer WHERE from_user = ? OR to_user = ?;";
         try {
-            SqlRowSet results = jdbcTemplate.queryForRowSet(sql, userId);
+            SqlRowSet results = jdbcTemplate.queryForRowSet(sql, name, name);
             while (results.next()){
                 allTransfers.add(mapRowToTransfer(results));
             }

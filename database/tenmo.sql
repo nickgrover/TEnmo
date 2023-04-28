@@ -2,7 +2,7 @@ BEGIN TRANSACTION;
 
 DROP TABLE IF EXISTS tenmo_user, account, transfer, account_transfer;
 
-DROP SEQUENCE IF EXISTS seq_user_id, seq_account_id, seq_trasnfer_id;
+DROP SEQUENCE IF EXISTS seq_user_id, seq_account_id, seq_transfer_id;
 
 -- Sequence to start user_id values at 1001 instead of 1
 CREATE SEQUENCE seq_user_id
@@ -41,13 +41,15 @@ CREATE SEQUENCE seq_transfer_id
   
 CREATE TABLE transfer (
 	transfer_id int NOT NULL DEFAULT nextval('seq_transfer_id'),
-	from_account int NOT NULL,
-	to_account int NOT NULL,
+	from_user varchar(50) NOT NULL,
+	to_user varchar(50) NOT NULL,
 	transfer_amount numeric(13, 2) NOT NULL,
-	transfer_date timestamp NOT NULL, 
+	transfer_date date NOT NULL, 
+	status varchar(50) NOT NULL,
+	transfer_type varchar(50) NOT NULL,
 	CONSTRAINT PK_transfer PRIMARY KEY(transfer_id),
-	CONSTRAINT FK_transfer_from_account FOREIGN KEY (from_account) REFERENCES account (account_id),
-	CONSTRAINT FK_transfer_to_account FOREIGN KEY (to_account) REFERENCES account (account_id)
+	CONSTRAINT FK_transfer_from_user FOREIGN KEY (from_user) REFERENCES tenmo_user (username),
+	CONSTRAINT FK_transfer_to_user FOREIGN KEY (to_user) REFERENCES tenmo_user (username)
 );
 
 CREATE TABLE account_transfer (

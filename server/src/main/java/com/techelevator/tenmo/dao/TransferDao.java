@@ -21,7 +21,7 @@ public interface TransferDao {
 //    List<Transfer> getTransferByToAccountId(int toAccountId);
 
 
-    List<Transfer> getTransferByFromUserId(int userId);
+    List<Transfer> getTransferByUsername(String name);
 
 //    List<Transfer> getTransferByToUserId(int userId);
 

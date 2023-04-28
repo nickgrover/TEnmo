@@ -2,12 +2,14 @@ package com.techelevator.tenmo.dao;
 
 import com.techelevator.tenmo.model.Transfer;
 
+import java.security.Principal;
 import java.util.List;
 
 public interface TransferDao {
 
     //create
-    Transfer createTransfer(Transfer transfer);
+    Transfer createTransferSend(Transfer transfer);
+//    Transfer createTransferRequest(Transfer transfer);
 
     //read -potentially use the commented out methods to differentiate
     List<Transfer> getAllTransfers();

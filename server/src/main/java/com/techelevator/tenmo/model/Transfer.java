@@ -7,20 +7,23 @@ public class Transfer {
     private int transferId;
     private LocalDate transferDate;
     private double transferAmount;
-    private int toAccount;
-    private int fromAccount;
+    private String toUser;
+    private String fromUser;
     private String status;
+    private String type;
 
     public Transfer(){}
 
-    public Transfer(int transferId, LocalDate transferDate, double transferAmount, int toAccount, int fromAccount, String status) {
+    public Transfer(int transferId, LocalDate transferDate, double transferAmount, String toUser, String fromUser, String status, String type) {
         this.transferId = transferId;
         this.transferDate = transferDate;
         this.transferAmount = transferAmount;
-        this.toAccount = toAccount;
-        this.fromAccount = fromAccount;
+        this.toUser = toUser;
+        this.fromUser = fromUser;
         this.status = status;
+        this.type = type;
     }
+
 
     public int getTransferId() {
         return transferId;
@@ -46,20 +49,20 @@ public class Transfer {
         this.transferAmount = transferAmount;
     }
 
-    public int getToAccount() {
-        return toAccount;
+    public String getToUser() {
+        return toUser;
     }
 
-    public void setToAccount(int toAccount) {
-        this.toAccount = toAccount;
+    public void setToUser(String toUser) {
+        this.toUser = toUser;
     }
 
-    public int getFromAccount() {
-        return fromAccount;
+    public String getFromUser() {
+        return fromUser;
     }
 
-    public void setFromAccount(int fromAccount) {
-        this.fromAccount = fromAccount;
+    public void setFromUser(String fromUser) {
+        this.fromUser = fromUser;
     }
 
     public String getStatus() {
@@ -68,5 +71,13 @@ public class Transfer {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }

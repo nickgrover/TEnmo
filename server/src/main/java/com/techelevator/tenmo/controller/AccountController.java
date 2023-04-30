@@ -6,14 +6,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 //import org.springframework.stereotype.Component;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.validation.Valid;
+import java.security.Principal;
 import java.util.List;
 
 @RestController
-//@Component
+@Component
 @RequestMapping(path = "/accounts")
+@PreAuthorize("isAuthenticated()")
 public class AccountController {
 
     @Lazy
@@ -22,8 +27,8 @@ public class AccountController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @RequestMapping(method = RequestMethod.POST)
-    public Account createAccount(@RequestBody Account account) {
-        return accountDao.createAccount(account);
+    public Account createAccount(@Valid @RequestBody Account account, Principal principal) {
+        return accountDao.createAccount(account, principal);
     }
 
     @RequestMapping(method = RequestMethod.GET)
@@ -54,7 +59,7 @@ public class AccountController {
 //    }
 
     @RequestMapping(path = "/{id}", method = RequestMethod.PUT)
-    public Account update(@RequestBody Account account, @PathVariable int id) {
+    public Account update(@Valid @RequestBody Account account, @PathVariable int id) {
         Account updatedAccount = accountDao.updateAccount(account, id);
         if (updatedAccount == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found.");

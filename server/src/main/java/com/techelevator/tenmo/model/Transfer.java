@@ -1,15 +1,24 @@
 package com.techelevator.tenmo.model;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Positive;
 import java.time.LocalDate;
 
 public class Transfer {
 
     private int transferId;
+    @NotNull(message = "transfer date is required")
     private LocalDate transferDate;
+    @Positive(message = "Transfer amount must be greater than 0")
     private double transferAmount;
+    @NotBlank(message = "The to-user must not be blank")
     private String toUser;
+    @NotBlank(message = "The from-user must not be blank")
     private String fromUser;
+    @NotBlank(message = "The status must not be blank")
     private String status;
+    @NotBlank(message = "The type must not be blank")
     private String type;
 
     public Transfer(){}

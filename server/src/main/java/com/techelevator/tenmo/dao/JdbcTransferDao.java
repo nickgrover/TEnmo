@@ -71,11 +71,21 @@ public class JdbcTransferDao implements TransferDao{
     @Override
     public Transfer createTransferRequest(Transfer transfer) {
         Transfer createdTransfer = null;
+        String status = "pending";
         if (transfer.getTransferAmount() > 0 && !transfer.getFromUser().equals(transfer.getToUser())) {
-            
+            String sql = "INSERT INTO transfer (from_user, to_user, transfer_amount, transfer_date, status, transfer_type) VALUES (?, ?, ?, ?, ?, ?) RETURNING transfer_id;";
+            try {
+                int newTransferId = jdbcTemplate.queryForObject(sql, int.class, transfer.getFromUser(), transfer.getToUser(), transfer.getTransferAmount(), transfer.getTransferDate(), status, transfer.getType());
+                createdTransfer = getTransferByTransferId(newTransferId);
+            } catch (CannotGetJdbcConnectionException e) {
+                throw new DaoException("Unable to connect to server or database", e);
+            } catch (BadSqlGrammarException e) {
+                throw new DaoException("SQL syntax error", e);
+            } catch (DataIntegrityViolationException e) {
+                throw new DaoException("Data integrity violation", e);
+            }
         }
-
-
+        return createdTransfer;
     }
 
 
@@ -138,32 +148,11 @@ public class JdbcTransferDao implements TransferDao{
         return allTransfers;
     }
 
-//    @Override
-//    public List<Transfer> getTransferByToAccountId(int toAccountId) {
-//        List<Transfer> allTransfers = new ArrayList<>();
-//        String sql = "SELECT transfer_id, transfer_date, transfer_amount, from_account, to_account, status FROM transfer JOIN account_transfer USING(transfer_id) WHERE account_id = ?;";
-//        try {
-//            SqlRowSet results = jdbcTemplate.queryForRowSet(sql, toAccountId);
-//            while (results.next()){
-//                allTransfers.add(mapRowToTransfer(results));
-//            }
-//        } catch (CannotGetJdbcConnectionException e) {
-//            throw new DaoException("Unable to connect to server or database", e);
-//        } catch (BadSqlGrammarException e) {
-//            throw new DaoException("SQL syntax error", e);
-//        } catch (DataIntegrityViolationException e) {
-//            throw new DaoException("Data integrity violation", e);
-//        }
-//        return allTransfers;
-//    }
-
-
 
     //FIX sql statement
     @Override
     public List<Transfer> getTransferByUsername(String name) {
         List<Transfer> allTransfers = new ArrayList<>();
-//        String sql = "SELECT transfer_id, from_user, to_user, transfer_amount, transfer_date, status, transfer_type FROM transfer JOIN account_transfer USING(transfer_id) JOIN account USING(account_id) JOIN tenmo_user USING(user_id) WHERE username = ?;";
         String sql = "SELECT transfer_id, from_user, to_user, transfer_amount, transfer_date, status, transfer_type FROM transfer WHERE from_user = ? OR to_user = ?;";
         try {
             SqlRowSet results = jdbcTemplate.queryForRowSet(sql, name, name);
@@ -180,24 +169,26 @@ public class JdbcTransferDao implements TransferDao{
         return allTransfers;
     }
 
-//    @Override
-//    public List<Transfer> getTransferByToUserId(int userId) {
-//        List<Transfer> allTransfers = new ArrayList<>();
-//        String sql = "SELECT transfer_id, transfer_date, transfer_amount, from_account, to_account, status FROM transfer JOIN account_transfer USING(transfer_id) JOIN account USING(account_id) WHERE user_id = ?;";
-//        try {
-//            SqlRowSet results = jdbcTemplate.queryForRowSet(sql, userId);
-//            while (results.next()){
-//                allTransfers.add(mapRowToTransfer(results));
-//            }
-//        } catch (CannotGetJdbcConnectionException e) {
-//            throw new DaoException("Unable to connect to server or database", e);
-//        } catch (BadSqlGrammarException e) {
-//            throw new DaoException("SQL syntax error", e);
-//        } catch (DataIntegrityViolationException e) {
-//            throw new DaoException("Data integrity violation", e);
-//        }
-//        return allTransfers;
-//    }
+    @Override
+    public List<Transfer> getRequestsByUsername(String name) {
+        List<Transfer> allTransfers = new ArrayList<>();
+        String sql = "SELECT transfer_id, from_user, to_user, transfer_amount, transfer_date, status, transfer_type FROM transfer WHERE transfer_type = 'request' AND from_user = ?;";
+        try {
+            SqlRowSet results = jdbcTemplate.queryForRowSet(sql, name);
+            while (results.next()){
+                allTransfers.add(mapRowToTransfer(results));
+            }
+        } catch (CannotGetJdbcConnectionException e) {
+            throw new DaoException("Unable to connect to server or database", e);
+        } catch (BadSqlGrammarException e) {
+            throw new DaoException("SQL syntax error", e);
+        } catch (DataIntegrityViolationException e) {
+            throw new DaoException("Data integrity violation", e);
+        }
+        return allTransfers;
+    }
+
+
 
     @Override
     public Transfer updateTransfer(Transfer transfer, int id) {
@@ -220,7 +211,43 @@ public class JdbcTransferDao implements TransferDao{
         return updatedTransfer;
     }
 
-    //add update to change the balances
+
+    @Override
+    public Transfer updateRequest(Transfer transfer, int id) {
+        Transfer updatedTransfer = null;
+        String approved = "approved";
+        String denied = "denied";
+        String sql = "UPDATE transfer SET status = ? WHERE transfer_id = ?;";
+        try {
+            if (transfer.getStatus().equalsIgnoreCase("approved")) {
+                int numOfRows = jdbcTemplate.update(sql, approved, transfer.getTransferId());
+                if (numOfRows == 0) {
+                    throw new DaoException("Zero rows affected, expected at least 1");
+                } else {
+                    updatedTransfer = getTransferByTransferId(transfer.getTransferId());
+                }
+                String sqlUpdateFrom = "UPDATE account SET balance = balance - ? FROM tenmo_user WHERE tenmo_user.user_id = account.user_id AND tenmo_user.username = ?;";
+                jdbcTemplate.update(sqlUpdateFrom, transfer.getTransferAmount(), transfer.getFromUser());
+                String sqlUpdateTo = "UPDATE account SET balance = balance + ? FROM tenmo_user WHERE tenmo_user.user_id = account.user_id AND tenmo_user.username = ?;";
+                jdbcTemplate.update(sqlUpdateTo, transfer.getTransferAmount(), transfer.getToUser());
+            }
+            if (transfer.getStatus().equalsIgnoreCase("denied")) {
+                int numOfRows = jdbcTemplate.update(sql, denied, transfer.getTransferId());
+                if (numOfRows == 0){
+                    throw new DaoException("Zero rows affected, expected at least 1");
+                } else {
+                    updatedTransfer = getTransferByTransferId(transfer.getTransferId());
+                }
+            }
+        } catch (CannotGetJdbcConnectionException e) {
+            throw new DaoException("Unable to connect to server or database", e);
+        } catch (BadSqlGrammarException e) {
+            throw new DaoException("SQL syntax error", e);
+        } catch (DataIntegrityViolationException e) {
+            throw new DaoException("Data integrity violation", e);
+        }
+        return updatedTransfer;
+    }
 
 
     @Override

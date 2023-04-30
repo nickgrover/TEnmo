@@ -9,6 +9,7 @@ public interface TransferDao {
 
     //create
     Transfer createTransferSend(Transfer transfer);
+    Transfer createTransferRequest(Transfer transfer);
 //    Transfer createTransferRequest(Transfer transfer);
 
     //read -potentially use the commented out methods to differentiate
@@ -22,12 +23,14 @@ public interface TransferDao {
 
 
     List<Transfer> getTransferByUsername(String name);
+    List<Transfer> getRequestsByUsername(String name);
 
 //    List<Transfer> getTransferByToUserId(int userId);
 
 
     //update
     Transfer updateTransfer(Transfer transfer, int id);
+    Transfer updateRequest(Transfer transfer, int id);
 
 
     //delete

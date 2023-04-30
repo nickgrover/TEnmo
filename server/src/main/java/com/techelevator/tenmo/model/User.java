@@ -1,5 +1,7 @@
 package com.techelevator.tenmo.model;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -7,9 +9,13 @@ import java.util.Set;
 public class User {
 
    private int id;
+   @NotBlank(message = "The username must not be blank.")
    private String username;
+   @NotBlank(message = "The password must not be blank.")
    private String password;
+   @NotNull(message = "Activation status must not be null")
    private boolean activated;
+   @NotNull(message = "Authorities must not be null")
    private Set<Authority> authorities = new HashSet<>();
 
    public User() { }

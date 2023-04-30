@@ -3,6 +3,7 @@ package com.techelevator.tenmo.dao;
 import com.techelevator.tenmo.exception.DaoException;
 import com.techelevator.tenmo.model.Account;
 import com.techelevator.tenmo.model.Transfer;
+import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.BadSqlGrammarException;
@@ -32,7 +33,7 @@ public class JdbcAccountDao implements AccountDao{
     public Account createAccount(Account account, Principal principal) {
         Account createdAccount;
         double startingBalance = 1000;
-        String sql = "INSERT INTO account(user_id, balance) VALUES (?, ?) WHERE RETURNING account_id;";
+        String sql = "INSERT INTO account(user_id, balance) VALUES (?, ?) RETURNING account_id;";
         try {
             int newAccountId = jdbcTemplate.queryForObject(sql, int.class, userDao.findIdByUsername(principal.getName()), startingBalance);
             createdAccount = getAccountByAccountId(newAccountId);
@@ -93,6 +94,7 @@ public class JdbcAccountDao implements AccountDao{
         try {
             SqlRowSet results = jdbcTemplate.queryForRowSet(sql, id);
             while (results.next()) {
+
                 account = mapRowToAccount(results);
             }
         } catch (CannotGetJdbcConnectionException e) {
@@ -182,4 +184,6 @@ public class JdbcAccountDao implements AccountDao{
         account.setBalance(sqlRowSet.getDouble("balance"));
         return account;
     }
+
+
 }

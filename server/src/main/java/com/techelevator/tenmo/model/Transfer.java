@@ -16,6 +16,10 @@ public class Transfer {
     private String toUser;
     @NotBlank(message = "The from-user must not be blank")
     private String fromUser;
+    @NotNull(message = "account id required")
+    private int fromAccount;
+    @NotNull(message = "account id required")
+    private int toAccount;
     @NotBlank(message = "The status must not be blank")
     private String status;
     @NotBlank(message = "The type must not be blank")
@@ -23,16 +27,33 @@ public class Transfer {
 
     public Transfer(){}
 
-    public Transfer(int transferId, LocalDate transferDate, double transferAmount, String toUser, String fromUser, String status, String type) {
+    public Transfer(int transferId, LocalDate transferDate, double transferAmount, String toUser, String fromUser, int fromAccount, int toAccount, String status, String type) {
         this.transferId = transferId;
         this.transferDate = transferDate;
         this.transferAmount = transferAmount;
         this.toUser = toUser;
         this.fromUser = fromUser;
+        this.fromAccount = fromAccount;
+        this.toAccount = toAccount;
         this.status = status;
         this.type = type;
     }
 
+    public int getFromAccount() {
+        return fromAccount;
+    }
+
+    public void setFromAccount(int fromAccount) {
+        this.fromAccount = fromAccount;
+    }
+
+    public int getToAccount() {
+        return toAccount;
+    }
+
+    public void setToAccount(int toAccount) {
+        this.toAccount = toAccount;
+    }
 
     public int getTransferId() {
         return transferId;

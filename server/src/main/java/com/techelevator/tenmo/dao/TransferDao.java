@@ -8,16 +8,15 @@ import java.util.List;
 public interface TransferDao {
 
     //create
-    Transfer createTransferSend(Transfer transfer);
-    Transfer createTransferRequest(Transfer transfer);
+    Transfer createTransferSend(Transfer transfer, Principal principal);
+    Transfer createTransferRequest(Transfer transfer, Principal principal);
 //    Transfer createTransferRequest(Transfer transfer);
 
     //read -potentially use the commented out methods to differentiate
     List<Transfer> getAllTransfers();
-
     Transfer getTransferByTransferId(int transferId);
 
-    List<Transfer> getTransferByFromAccountId(int fromAccountId);
+//    List<Transfer> getTransferByFromAccountId(int fromAccountId);
 
 //    List<Transfer> getTransferByToAccountId(int toAccountId);
 

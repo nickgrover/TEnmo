@@ -35,16 +35,19 @@ public class TransferController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @RequestMapping(path = "/transfers", method = RequestMethod.POST)
-    public Transfer addSend(@Valid @RequestBody Transfer transfer) {
+    public Transfer addSend(@Valid @RequestBody Transfer transfer, Principal principal) {
         if (transfer.getType().equalsIgnoreCase("send")) {
-            Transfer transferNew = dao.createTransferSend(transfer);
+            Transfer transferNew = dao.createTransferSend(transfer, principal);
             if (transferNew == null) {
                 throw new ResponseStatusException(HttpStatus.I_AM_A_TEAPOT, "Insufficient funds.");
             } else {
                 return transferNew;
             }
         } else if (transfer.getType().equalsIgnoreCase("request")) {
-            Transfer newRequest = dao.createTransferRequest(transfer);
+            Transfer newRequest = dao.createTransferRequest(transfer, principal);
+            if (newRequest == null){
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot request money from self");
+            }
             return newRequest;
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid transfer type.");

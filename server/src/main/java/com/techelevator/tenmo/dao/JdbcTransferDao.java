@@ -33,28 +33,28 @@ public class JdbcTransferDao implements TransferDao{
 
 
     @Override
-    public Transfer createTransferSend(Transfer transfer) {
+    public Transfer createTransferSend(Transfer transfer, Principal principal) {
         Transfer createdTransfer = null;
         double fromBalance = 0;
         String status = "approved";
-        String sqlfrom = "SELECT account_id, user_id, balance FROM account WHERE user_id = ?;";
-        SqlRowSet from = jdbcTemplate.queryForRowSet(sqlfrom, userDao.findIdByUsername(transfer.getFromUser()));
+        String sqlfrom = "SELECT account_id, user_id, balance FROM account WHERE account_id = ?;";
+        SqlRowSet from = jdbcTemplate.queryForRowSet(sqlfrom, transfer.getFromAccount());
         while (from.next()){
             fromBalance = from.getDouble("balance");
         }
         if (fromBalance > 0 && fromBalance >= transfer.getTransferAmount() && !transfer.getFromUser().equals(transfer.getToUser())) {
 
-            String sql = "INSERT INTO transfer (from_user, to_user, transfer_amount, transfer_date, status, transfer_type) VALUES (?, ?, ?, ?, ?, ?) RETURNING transfer_id;";
+            String sql = "INSERT INTO transfer (from_user, to_user, from_account, to_account, transfer_amount, transfer_date, status, transfer_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING transfer_id;";
             try {
-                int newTransferId = jdbcTemplate.queryForObject(sql, int.class, transfer.getFromUser(), transfer.getToUser(), transfer.getTransferAmount(), transfer.getTransferDate(), status, transfer.getType());
+                int newTransferId = jdbcTemplate.queryForObject(sql, int.class, principal.getName(), transfer.getToUser(), transfer.getFromAccount(), transfer.getToAccount(), transfer.getTransferAmount(), transfer.getTransferDate(), status, transfer.getType());
                 createdTransfer = getTransferByTransferId(newTransferId);
 
                 // Do the account updates
-                String sqlUpdateFrom = "UPDATE account SET balance = balance - ? FROM tenmo_user WHERE tenmo_user.user_id = account.user_id AND tenmo_user.username = ?;";
-                jdbcTemplate.update(sqlUpdateFrom, transfer.getTransferAmount(), transfer.getFromUser());
+                String sqlUpdateFrom = "UPDATE account SET balance = balance - ? WHERE account_id = ?;";
+                jdbcTemplate.update(sqlUpdateFrom, transfer.getTransferAmount(), transfer.getFromAccount());
 
-                String sqlUpdateTo = "UPDATE account SET balance = balance + ? FROM tenmo_user WHERE tenmo_user.user_id = account.user_id AND tenmo_user.username = ?;";
-                jdbcTemplate.update(sqlUpdateTo, transfer.getTransferAmount(), transfer.getToUser());
+                String sqlUpdateTo = "UPDATE account SET balance = balance + ? WHERE account_id = ?;";
+                jdbcTemplate.update(sqlUpdateTo, transfer.getTransferAmount(), transfer.getToAccount());
 
             } catch (CannotGetJdbcConnectionException e) {
                 throw new DaoException("Unable to connect to server or database", e);
@@ -69,13 +69,13 @@ public class JdbcTransferDao implements TransferDao{
 
 
     @Override
-    public Transfer createTransferRequest(Transfer transfer) {
+    public Transfer createTransferRequest(Transfer transfer, Principal principal) {
         Transfer createdTransfer = null;
         String status = "pending";
-        if (transfer.getTransferAmount() > 0 && !transfer.getFromUser().equals(transfer.getToUser())) {
-            String sql = "INSERT INTO transfer (from_user, to_user, transfer_amount, transfer_date, status, transfer_type) VALUES (?, ?, ?, ?, ?, ?) RETURNING transfer_id;";
+        if (transfer.getTransferAmount() > 0 && !principal.getName().equals(transfer.getFromUser())) {
+            String sql = "INSERT INTO transfer (from_user, to_user, from_account, to_account, transfer_amount, transfer_date, status, transfer_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING transfer_id;";
             try {
-                int newTransferId = jdbcTemplate.queryForObject(sql, int.class, transfer.getFromUser(), transfer.getToUser(), transfer.getTransferAmount(), transfer.getTransferDate(), status, transfer.getType());
+                int newTransferId = jdbcTemplate.queryForObject(sql, int.class, transfer.getFromUser(), principal.getName(), transfer.getFromAccount(), transfer.getToAccount(), transfer.getTransferAmount(), transfer.getTransferDate(), status, transfer.getType());
                 createdTransfer = getTransferByTransferId(newTransferId);
             } catch (CannotGetJdbcConnectionException e) {
                 throw new DaoException("Unable to connect to server or database", e);
@@ -93,7 +93,7 @@ public class JdbcTransferDao implements TransferDao{
     @Override
     public List<Transfer> getAllTransfers() {
         List<Transfer> allTransfers = new ArrayList<>();
-        String sql = "SELECT transfer_id, from_user, to_user, transfer_amount, transfer_date, status, transfer_type FROM transfer;";
+        String sql = "SELECT transfer_id, from_user, to_user, from_account, to_account, transfer_amount, transfer_date, status, transfer_type FROM transfer;";
         try {
             SqlRowSet results = jdbcTemplate.queryForRowSet(sql);
             while (results.next()){
@@ -112,7 +112,7 @@ public class JdbcTransferDao implements TransferDao{
     @Override
     public Transfer getTransferByTransferId(int transferId) {
         Transfer transfer = new Transfer();
-        String sql = "SELECT transfer_id, from_user, to_user, transfer_amount, transfer_date, status, transfer_type FROM transfer WHERE transfer_id = ?;";
+        String sql = "SELECT transfer_id, from_user, to_user, from_account, to_account, transfer_amount, transfer_date, status, transfer_type FROM transfer WHERE transfer_id = ?;";
         try{
             SqlRowSet results = jdbcTemplate.queryForRowSet(sql, transferId);
             while (results.next()){
@@ -128,32 +128,32 @@ public class JdbcTransferDao implements TransferDao{
         return transfer;
     }
 
-    //FIX sql statement
-    @Override
-    public List<Transfer> getTransferByFromAccountId(int fromAccountId) {
-        List<Transfer> allTransfers = new ArrayList<>();
-        String sql = "SELECT transfer_id, transfer_date, transfer_amount, from_account, to_account, status FROM transfer JOIN account_transfer USING(transfer_id) WHERE account_id = ?;";
-        try {
-            SqlRowSet results = jdbcTemplate.queryForRowSet(sql, fromAccountId);
-            while (results.next()){
-                allTransfers.add(mapRowToTransfer(results));
-            }
-        } catch (CannotGetJdbcConnectionException e) {
-            throw new DaoException("Unable to connect to server or database", e);
-        } catch (BadSqlGrammarException e) {
-            throw new DaoException("SQL syntax error", e);
-        } catch (DataIntegrityViolationException e) {
-            throw new DaoException("Data integrity violation", e);
-        }
-        return allTransfers;
-    }
+//    //FIX sql statement
+//    @Override
+//    public List<Transfer> getTransferByFromAccountId(int fromAccountId) {
+//        List<Transfer> allTransfers = new ArrayList<>();
+//        String sql = "SELECT transfer_id, transfer_date, transfer_amount, from_account, to_account, status FROM transfer JOIN account_transfer USING(transfer_id) WHERE account_id = ?;";
+//        try {
+//            SqlRowSet results = jdbcTemplate.queryForRowSet(sql, fromAccountId);
+//            while (results.next()){
+//                allTransfers.add(mapRowToTransfer(results));
+//            }
+//        } catch (CannotGetJdbcConnectionException e) {
+//            throw new DaoException("Unable to connect to server or database", e);
+//        } catch (BadSqlGrammarException e) {
+//            throw new DaoException("SQL syntax error", e);
+//        } catch (DataIntegrityViolationException e) {
+//            throw new DaoException("Data integrity violation", e);
+//        }
+//        return allTransfers;
+//    }
 
 
     //FIX sql statement
     @Override
     public List<Transfer> getTransferByUsername(String name) {
         List<Transfer> allTransfers = new ArrayList<>();
-        String sql = "SELECT transfer_id, from_user, to_user, transfer_amount, transfer_date, status, transfer_type FROM transfer WHERE from_user = ? OR to_user = ?;";
+        String sql = "SELECT transfer_id, from_user, to_user, from_account, to_account, transfer_amount, transfer_date, status, transfer_type FROM transfer WHERE from_user = ? OR to_user = ?;";
         try {
             SqlRowSet results = jdbcTemplate.queryForRowSet(sql, name, name);
             while (results.next()){
@@ -172,7 +172,7 @@ public class JdbcTransferDao implements TransferDao{
     @Override
     public List<Transfer> getRequestsByUsername(String name) {
         List<Transfer> allTransfers = new ArrayList<>();
-        String sql = "SELECT transfer_id, from_user, to_user, transfer_amount, transfer_date, status, transfer_type FROM transfer WHERE transfer_type = 'request' AND from_user = ?;";
+        String sql = "SELECT transfer_id, from_user, to_user, from_account, to_account, transfer_amount, transfer_date, status, transfer_type FROM transfer WHERE transfer_type = 'request' AND from_user = ?;";
         try {
             SqlRowSet results = jdbcTemplate.queryForRowSet(sql, name);
             while (results.next()){
@@ -193,9 +193,9 @@ public class JdbcTransferDao implements TransferDao{
     @Override
     public Transfer updateTransfer(Transfer transfer, int id) {
         Transfer updatedTransfer = null;
-        String sql = "UPDATE transfer SET from_user = ?, to_user = ?, transfer_amount = ?, transfer_date = ?, status = ?, transfer_type = ? WHERE transfer_id = ?;";
+        String sql = "UPDATE transfer SET from_user = ?, to_user = ?, from_account = ?, to_account = ?, transfer_amount = ?, transfer_date = ?, status = ?, transfer_type = ? WHERE transfer_id = ?;";
         try {
-            int numberOfRows = jdbcTemplate.update(sql, transfer.getFromUser(), transfer.getToUser(), transfer.getTransferAmount(), transfer.getTransferDate(), transfer.getStatus(), transfer.getType(), transfer.getTransferId());
+            int numberOfRows = jdbcTemplate.update(sql, transfer.getFromUser(), transfer.getToUser(), transfer.getFromAccount(), transfer.getToAccount(), transfer.getTransferAmount(), transfer.getTransferDate(), transfer.getStatus(), transfer.getType(), transfer.getTransferId());
             if (numberOfRows == 0){
                 throw new DaoException("Zero rows affected, expected at least 1");
             } else {
@@ -226,10 +226,10 @@ public class JdbcTransferDao implements TransferDao{
                 } else {
                     updatedTransfer = getTransferByTransferId(transfer.getTransferId());
                 }
-                String sqlUpdateFrom = "UPDATE account SET balance = balance - ? FROM tenmo_user WHERE tenmo_user.user_id = account.user_id AND tenmo_user.username = ?;";
-                jdbcTemplate.update(sqlUpdateFrom, transfer.getTransferAmount(), transfer.getFromUser());
-                String sqlUpdateTo = "UPDATE account SET balance = balance + ? FROM tenmo_user WHERE tenmo_user.user_id = account.user_id AND tenmo_user.username = ?;";
-                jdbcTemplate.update(sqlUpdateTo, transfer.getTransferAmount(), transfer.getToUser());
+                String sqlUpdateFrom = "UPDATE account SET balance = balance - ? WHERE account_id = ?;";
+                jdbcTemplate.update(sqlUpdateFrom, transfer.getTransferAmount(), transfer.getFromAccount());
+                String sqlUpdateTo = "UPDATE account SET balance = balance + ? WHERE account_id = ?";
+                jdbcTemplate.update(sqlUpdateTo, transfer.getTransferAmount(), transfer.getToAccount());
             }
             if (transfer.getStatus().equalsIgnoreCase("denied")) {
                 int numOfRows = jdbcTemplate.update(sql, denied, transfer.getTransferId());
@@ -272,6 +272,8 @@ public class JdbcTransferDao implements TransferDao{
         transfer.setTransferId(sqlRowSet.getInt("transfer_id"));
         transfer.setFromUser(sqlRowSet.getString("from_user"));
         transfer.setToUser(sqlRowSet.getString("to_user"));
+        transfer.setFromAccount(sqlRowSet.getInt("from_account"));
+        transfer.setToAccount(sqlRowSet.getInt("to_account"));
         transfer.setTransferAmount(sqlRowSet.getDouble("transfer_amount"));
         transfer.setTransferDate(sqlRowSet.getDate("transfer_date").toLocalDate());
         transfer.setStatus(sqlRowSet.getString("status"));

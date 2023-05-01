@@ -29,6 +29,10 @@ public class JdbcAccountDao implements AccountDao{
         this.userDao = userDao;
     }
 
+    public JdbcAccountDao(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
     @Override
     public Account createAccount(Account account, Principal principal) {
         Account createdAccount;
@@ -46,25 +50,6 @@ public class JdbcAccountDao implements AccountDao{
         }
         return createdAccount;
     }
-
-
-//    @Override
-//    public Account createAccount(Account account) {
-//        Account createdAccount;
-//        double startingBalance = 1000;
-//        String sql = "INSERT INTO account(user_id, balance) VALUES (?, ?) RETURNING account_id;";
-//        try {
-//            int newAccountId = jdbcTemplate.queryForObject(sql, int.class, account.getUserId(), startingBalance);
-//            createdAccount = getAccountByAccountId(newAccountId);
-//        } catch (CannotGetJdbcConnectionException e) {
-//            throw new DaoException("Unable to connect to server or database", e);
-//        } catch (BadSqlGrammarException e) {
-//            throw new DaoException("SQL syntax error", e);
-//        } catch (DataIntegrityViolationException e) {
-//            throw new DaoException("Data integrity violation", e);
-//        }
-//        return createdAccount;
-//    }
 
 
 

@@ -1,5 +1,5 @@
 BEGIN TRANSACTION;
-DROP TABLE IF EXISTS tenmo_user, account, transfer;
+DROP TABLE IF EXISTS tenmo_user, account, transfer, account_transfer;
 DROP SEQUENCE IF EXISTS seq_user_id, seq_account_id, seq_transfer_id;
 -- Sequence to start user_id values at 1001 instead of 1
 CREATE SEQUENCE seq_user_id
@@ -47,6 +47,3 @@ CREATE TABLE transfer (
 	CONSTRAINT FK_transfer_from_user FOREIGN KEY (from_user) REFERENCES tenmo_user (username),
 	CONSTRAINT FK_transfer_to_user FOREIGN KEY (to_user) REFERENCES tenmo_user (username)
 );
-
-
-COMMIT;

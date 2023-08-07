@@ -128,26 +128,6 @@ public class JdbcTransferDao implements TransferDao{
         return transfer;
     }
 
-//    //FIX sql statement
-//    @Override
-//    public List<Transfer> getTransferByFromAccountId(int fromAccountId) {
-//        List<Transfer> allTransfers = new ArrayList<>();
-//        String sql = "SELECT transfer_id, transfer_date, transfer_amount, from_account, to_account, status FROM transfer JOIN account_transfer USING(transfer_id) WHERE account_id = ?;";
-//        try {
-//            SqlRowSet results = jdbcTemplate.queryForRowSet(sql, fromAccountId);
-//            while (results.next()){
-//                allTransfers.add(mapRowToTransfer(results));
-//            }
-//        } catch (CannotGetJdbcConnectionException e) {
-//            throw new DaoException("Unable to connect to server or database", e);
-//        } catch (BadSqlGrammarException e) {
-//            throw new DaoException("SQL syntax error", e);
-//        } catch (DataIntegrityViolationException e) {
-//            throw new DaoException("Data integrity violation", e);
-//        }
-//        return allTransfers;
-//    }
-
 
     //FIX sql statement
     @Override
